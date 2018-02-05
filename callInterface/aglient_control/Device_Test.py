@@ -1,0 +1,131 @@
+# -*- coding: GB18030 -*-
+import os,time,string
+from Instrument_Control import *
+from CONSTANTS import *
+from Analyse import *
+import os
+
+#获取上级目录callInterface
+curr_path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)),os.path.pardir))
+RFID_power_path = os.path.join(curr_path,"result_file\wireless-indicator"+"\RFID-power.xls")
+RFID_ACPR_path_40 = os.path.join(curr_path,"result_file\wireless-indicator"+"\RFID-ACPR_40.xls")
+RFID_ACPR_path_80 = os.path.join(curr_path,"result_file\wireless-indicator"+"\RFID-ACPR_80.xls")
+
+agilent_client = Agilent()
+agilent_client.OpenInstrument()
+agilent_client.Initialize()
+#获取频谱仪峰值功率和频率,发射信号频率稳定度和发射功率测试
+def testFrqPower(fCenterFrequency,fRefer,fPower,fChannelIndex,curr_col):
+    print u"=============频谱仪开始抓取功率为：{0}，频点为：{1}的数据==========".format(fPower,fChannelIndex)
+    agilent_client.SA_SetOffset(fOffset)
+    agilent_client.SA_SetCenterFrequency(fCenterFrequency)
+    agilent_client.SA_SetSpan(0.5) #设置X轴的值
+    agilent_client.SA_SetTraceMode(1)
+    agilent_client.SA_SetReferenceLevel(fRefer) #设置参考值Y轴
+    time.sleep(2)
+    agilent_client.SA_PeakSearch()
+    x,y = agilent_client.SA_GetMark()
+    x = '{:.3f}'.format(float(x)/1000000)
+    y = '{:.3f}'.format(float(y))
+    num = 5
+    while float(y) < 0:
+        print u"Peak Search失败，重新取值"
+        agilent_client.SA_PeakSearch()
+        x,y = agilent_client.SA_GetMark()
+        x = '{:.3f}'.format(float(x)/1000000)
+        y = '{:.3f}'.format(float(y))
+        num = num - 1
+        if float(y) > 0 or num == 0:
+            break
+
+    write_PowerResult(fPower,RFID_power_path,curr_col,y)
+    print u"频谱仪测试结果：中心频点值{0}".format(x)
+    print u"频谱仪测试结果：功率值{0}".format(y)
+
+#发射频率范围和发射信号平坦度测试
+def testFrqSignalFlatness(fCenterFrequency):
+    agilent_client.SA_SetMeas(1) #选择频谱仪的测量模式为连续扫频模式
+    agilent_client.SA_SetCenterFrequency(fCenterFrequency) #设置中心频点
+    agilent_client.SA_SetSpan(0.5)  #设置频谱带宽
+    agilent_client.SA_SetRBW(100) #设置分辨率带宽（100KHz）
+    agilent_client.SA_SetTraceMode(1) #设置频谱仪为最大值保持模式
+    agilent_client.SA_SetCont(1) #设置频谱仪为连续扫频模式
+    #获取发射频率范围和发射信号平坦度
+    agilent_client.SA_PeakSearch()
+    x,y = agilent_client.SA_GetMark()
+    print x,y
+
+def analyze_ACPR_40(data,ModulationType_text,curr_num):
+    acpr_result = data.split(",")
+    lower_num1 = '{:.3f}'.format(float(acpr_result[4]))
+    lower_num2 = '{:.3f}'.format(float(acpr_result[8]))
+    upper_num1 = '{:.3f}'.format(float(acpr_result[6]))
+    upper_num2 = '{:.3f}'.format(float(acpr_result[10]))
+    print u"第一个低邻道的泄漏比:{0}".format(lower_num1)
+    print u"第二个低邻道的泄漏比:{0}".format(lower_num2)
+    print u"第一个高邻道的泄漏比:{0}".format(upper_num1)
+    print u"第二个高邻道的泄漏比:{0}".format(upper_num2)
+    write_file(ModulationType_text,RFID_ACPR_path_40,curr_num,lower_num2,lower_num1,upper_num1,upper_num2)
+
+#邻道功率泄漏比
+def testACPR_40(ModulationType_text,curr_num):
+    agilent_client.SA_SetMeas(3) #选择频谱仪的测量模式为ACP模式
+    #设置ACP测量参数，包括：
+    #主信道带宽（250KHz）
+    #和信道间距离（250KHz）
+    #分辨率带宽（10KHz）
+    #默认参数：
+    #扫频时间（自动），扫频宽度（1.5 MHz）
+    #扫频点数（1001）	SA_SetACPR
+    agilent_client.SA_SetACPR()
+    acpr = agilent_client.SA_GetACPRPower()
+    analyze_ACPR_40(acpr,ModulationType_text,curr_num)
+
+def analyze_ACPR_80(data,ModulationType_text,curr_num):
+    acpr_result = data.split(",")
+    lower_num1 = '{:.3f}'.format(float(acpr_result[4]))
+    lower_num2 = '{:.3f}'.format(float(acpr_result[8]))
+    upper_num1 = '{:.3f}'.format(float(acpr_result[6]))
+    upper_num2 = '{:.3f}'.format(float(acpr_result[10]))
+    print u"第一个低邻道的泄漏比:{0}".format(lower_num1)
+    print u"第二个低邻道的泄漏比:{0}".format(lower_num2)
+    print u"第一个高邻道的泄漏比:{0}".format(upper_num1)
+    print u"第二个高邻道的泄漏比:{0}".format(upper_num2)
+    write_file(ModulationType_text,RFID_ACPR_path_80,curr_num,lower_num2,lower_num1,upper_num1,upper_num2)
+
+#邻道功率泄漏比
+def testACPR_80(ModulationType_text,curr_num):
+    agilent_client.SA_SetMeas(3) #选择频谱仪的测量模式为ACP模式
+    #设置ACP测量参数，包括：
+    #主信道带宽（250KHz）
+    #和信道间距离（250KHz）
+    #分辨率带宽（10KHz）
+    #默认参数：
+    #扫频时间（自动），扫频宽度（1.5 MHz）
+    #扫频点数（1001）	SA_SetACPR
+    agilent_client.SA_SetACPR()
+    acpr = agilent_client.SA_GetACPRPower()
+    analyze_ACPR_80(acpr,ModulationType_text,curr_num)
+
+#占用带宽测试
+def testOBW():
+    agilent_client.SA_SetMeas(2)  #设置频谱仪的测量模式为OBW模式
+    #设置OBW测量参数，包括：
+    #分辨率带宽（10KHz）
+    #默认参数：
+    #扫频时间（自动）扫频点数（1001）
+    #扫频宽度（2MHz），和能量比（99%）
+    agilent_client.SA_SetOBW(2,10)
+    obw = agilent_client.SA_GetOBW()
+
+def resetSA():
+    agilent_client.SAInit()
+
+def set_protocol_conformance():
+    agilent_client.Set_Analyze()
+    agilent_client.Set_trigger()
+    agilent_client.scale_position()
+    agilent_client.Set_marker()
+
+def Save_waveform(filename):
+    agilent_client.Save_waveformtoDisk(filename)

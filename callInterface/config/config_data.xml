@@ -1,0 +1,4 @@
+<?xml version='1.0' encoding='utf-8'?>
+<SET_READER_CONFIG_INCREMENT MessageID="14">
+  <Data>FreqSetting_1:0,TransmitPower_1:30,ChannelIndex_1:10,ModulationType_GB:1,DataEncodeType_GB:0,ForwardDataRate_GB:40,ReverseDataRate_GB:80,ModulationDepth_GB:100</Data>
+</SET_READER_CONFIG_INCREMENT>
