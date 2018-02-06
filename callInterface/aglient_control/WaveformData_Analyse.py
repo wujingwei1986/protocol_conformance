@@ -19,7 +19,19 @@ waveform80_path = os.path.join(curr_path,"result_file\waveform80\\")
 def get_WaveformFile(waveform_path):
     for root, dirs, files in os.walk(waveform_path):
         return files #当前路径下所有非目录子文件
-
+#修改文件后缀名
+def change_fileSuffix(waveform_path,changeBefore,changeAfter):
+    files = get_WaveformFile(waveform_path)
+    for filename in files:
+        portion = os.path.splitext(filename)
+        if portion[1] == changeBefore:
+            newname = portion[0] + changeAfter
+            os.chdir(waveform_path)
+            os.rename(filename,newname)
+        else:
+            continue
+    files = get_WaveformFile(waveform_path) #重新遍历目录
+    return files
 #分析完的数据写入csv
 def write_toCSV(filename,data):
     with open(filename,"w") as csvfile:
@@ -30,10 +42,11 @@ def write_toCSV(filename,data):
         writer.writerows(data)
 
 def analyse_40_waveform():
-    filename_list = get_WaveformFile(waveform40_path)
+    filename_list = change_fileSuffix(waveform40_path,".csv",".txt")
     for filename in filename_list:
-        data = pd.read_csv(filename)
+        data = pd.read_csv(waveform40_path+filename)
         pd.set_option('precision', 12) #设置小数精度
+        data.columns = ["time","voltage"] #设置列名
         media = (data["voltage"].max()+data["voltage"].min())/2
         voltage_rangeMin = media*0.99
         voltage_rangeMax = media*1.01
@@ -126,10 +139,11 @@ def analyse_40_waveform():
 
 
 def analyse_80_waveform():
-    filename_list = get_WaveformFile(waveform80_path)
+    filename_list = change_fileSuffix(waveform80_path,".csv",".txt")
     for filename in filename_list:
-        data = pd.read_csv(filename)
+        data = pd.read_csv(waveform80_path+filename)
         pd.set_option('precision', 12) #设置小数精度
+        data.columns = ["time","voltage"] #设置列名
         media = (data["voltage"].max()+data["voltage"].min())/2
         voltage_rangeMin = media*0.99
         voltage_rangeMax = media*1.01
